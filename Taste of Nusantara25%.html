@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taste of Nusantara - Kuliner Indonesia</title>
+
+  <!-- ========== LIBRARY EKSTERNAL (Bootstrap, Font, Ikon) ========== -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Leaflet CSS (untuk peta interaktif) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- ========== CSS / TAMPILAN ========== -->
+  <style>
+    /* --- Warna utama website --- */
+    :root {
+      --bg-cream: #e2ceb1;
+      --primary-green: #1b5729;
+      --accent-orange: #f3ad61;
+      --accent-red: #a04838;
+      --light-cream: #fce8c3;
+      --hover-brown: #c7a07a;
+    }
+    body { background-color: var(--bg-cream); font-family: 'Poppins', sans-serif; color: #333; overflow-x: hidden; }
+
+    /* --- Style Navbar --- */
+    .navbar { background-color: var(--bg-cream) !important; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    .navbar-brand { font-weight: 700; color: var(--primary-green) !important; font-size: 1.5rem; }
+    .nav-link { font-weight: 600; color: #333 !important; border-radius: 1000rem; padding: .5rem 1rem !important; cursor: pointer; transition: all .2s; }
+    .nav-link:hover, .nav-link.active-nav { background-color: var(--hover-brown) !important; color: var(--primary-green) !important; }
+
+    /* --- Style Hero (banner utama) --- */
+    .hero-section {
+      min-height: 85vh;
+      background-image: linear-gradient(rgba(0,0,0,.6), rgba(0,0,0,.6)), url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80');
+      background-size: cover; background-position: center;
+      border-bottom-left-radius: 2rem; border-bottom-right-radius: 2rem;
+    }
+
+    /* --- Style Kartu & Tombol --- */
+    .card-nusantara { background-color: #fffaf0; border: none; border-radius: 1rem; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); transition: transform .3s, box-shadow .3s; }
+    .card-nusantara:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,.12); }
+    .card-img-top { height: 200px; object-fit: cover; }
+    .cursor-pointer { cursor: pointer; }
+    .btn-custom-primary { background-color: var(--primary-green); color: #fff; border-radius: 50rem; padding: .6rem 1.5rem; font-weight: 600; border: none; }
+    .btn-custom-primary:hover { background-color: #14401e; color: #fff; }
+    .btn-custom-secondary { background-color: var(--light-cream); color: #333; border-radius: 50rem; padding: .6rem 1.5rem; font-weight: 600; border: 1px solid var(--hover-brown); transition: all .2s; }
+    .btn-custom-secondary:hover, .btn-custom-secondary.active { background-color: var(--hover-brown); color: #fff; }
+    .badge-island { background-color: var(--accent-orange); color: #fff; font-weight: 500; padding: .4em .8em; border-radius: 50rem; font-size: .75rem; }
+
+    /* --- Sistem pindah halaman (hanya 1 halaman tampil) --- */
+    .page-view { display: none; animation: fadeIn .4s ease-in-out; }
+    .page-view.active-page { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- Style Peta Interaktif --- */
+    #map { height: 450px; width: 100%; border-radius: 18px; z-index: 1; }
+    .island-food-card { transition: transform .2s, box-shadow .2s; border-radius: 12px; }
+    .island-food-card:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,.08); }
+
+    /* --- Style Footer & Toast --- */
+    footer { background-color: #1b261e; color: #e2ceb1; border-top-left-radius: 2rem; border-top-right-radius: 2rem; }
+    #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1060; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================================================== -->
+  <!-- NAVBAR (menu navigasi atas) - 5 menu = 5 halaman     -->
+  <!-- ==================================================== -->
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container px-4">
+      <a class="navbar-brand" href="#" onclick="switchPage('home')">
+        <i class="fa-solid fa-utensils me-2"></i>Taste of Nusantara
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav align-items-center gap-1">
+          <li class="nav-item"><a class="nav-link" data-nav="home" onclick="switchPage('home')">Home</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav="map" onclick="switchPage('map')">Peta Pulau</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav="explore" onclick="switchPage('explore')">Pencarian</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav="input-recipe" onclick="switchPage('input-recipe')">Tambah Resep</a></li>
+          <li class="nav-item"><a class="nav-link" data-nav="rating" onclick="switchPage('rating')">Ulasan</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ==================================================== -->
+  <!-- HALAMAN 1: HOME (Hero + Pilihan Kuliner)            -->
+  <!-- ==================================================== -->
+  <div id="page-home" class="page-view active-page">
+
+    <!-- Bagian: Hero / banner pembuka -->
+    <section class="hero-section d-flex align-items-center">
+      <div class="container py-5">
+        <div class="col-lg-7 text-white">
+          <p class="text-uppercase fw-bold mb-2" style="color: var(--accent-orange); letter-spacing: 2px;">DISCOVER INDONESIAN CUISINE</p>
+          <h1 class="fw-bold mb-3 display-3">Explore the Taste<br>of Indonesia.</h1>
+          <p class="lead mb-4 text-light fs-6">Kenali kekayaan kuliner Nusantara melalui berbagai makanan khas, resep autentik, dan sejarah dari berbagai pulau di Indonesia.</p>
+          <button onclick="switchPage('map')" class="btn btn-custom-secondary px-4 py-3">Jelajahi Kuliner &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bagian: Daftar kuliner pilihan (diisi otomatis oleh JavaScript) -->
+    <div class="container py-5">
+      <div class="text-center mb-5">
+        <p class="text-uppercase fw-bold" style="color: var(--accent-red); letter-spacing: 2px;">DISCOVER</p>
+        <h2 class="display-5 fw-bold mb-3">Flavors of Nusantara</h2>
+        <p class="text-muted fs-6">Ikon kuliner paling lezat yang menjadi kebanggaan budaya Indonesia.</p>
+      </div>
+      <div class="row g-4" id="home-flavors-grid"></div>
+    </div>
+
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- HALAMAN 2: PETA INTERAKTIF (Leaflet + data pulau)      -->
+  <!-- ==================================================== -->
+  <div id="page-map" class="page-view">
+    <div class="container py-5">
+      <div class="text-center mb-5">
+        <span class="badge badge-island mb-2 px-3 py-2 fs-6">Interactive Map</span>
+        <h1 class="display-5 fw-bold">Jelajah Kuliner & Sejarah Nusantara</h1>
+        <p class="text-muted">Klik tombol pulau atau pin pada peta untuk melihat sejarah dan 5 makanan khasnya.</p>
+      </div>
+      <div class="row g-4">
+        <!-- Bagian: Peta satelit + tombol pilih pulau -->
+        <div class="col-lg-5">
+          <div class="card card-nusantara mb-3">
+            <div class="card-body">
+              <h5 class="fw-bold text-success mb-3">Peta Indonesia (Satelit)</h5>
+              <div id="map"></div>
+            </div>
+          </div>
+          <div class="card card-nusantara">
+            <div class="card-body">
+              <h6 class="fw-bold mb-3">Pilih Pulau:</h6>
+              <div class="d-grid gap-2" id="island-buttons"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Bagian: Detail sejarah & makanan khas pulau terpilih -->
+        <div class="col-lg-7">
+          <div class="card card-nusantara h-100">
+            <div class="card-body p-4" id="content-display">
+              <div class="text-center text-muted py-5">
+                <i class="fa-solid fa-location-dot display-4 text-success mb-3"></i>
+                <h4>Silakan pilih salah satu pulau</h4>
+                <p>Klik tombol atau marker pada peta untuk memuat informasi.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- HALAMAN 3: PENCARIAN (Pencarian + Filter Pulau/Kategori) -->
+  <!-- Menggantikan halaman Pencarian, Kategori, dan Pulau -->
+  <!-- ==================================================== -->
+  <div id="page-explore" class="page-view">
+    <div class="container py-5">
+      <div class="text-center mb-4">
+        <h1 class="display-5 fw-bold mb-2">Pencarian Kuliner Nusantara</h1>
+        <p class="text-muted">Cari berdasarkan nama, lalu saring berdasarkan pulau atau kategori.</p>
+      </div>
+
+      <!-- Bagian: Kolom pencarian -->
+      <div class="col-lg-6 mx-auto mb-4">
+        <div class="input-group input-group-lg shadow-sm">
+          <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+          <input type="text" id="search-input" class="form-control border-start-0" placeholder="Ketik nama makanan, daerah, atau bahan..." oninput="renderExplore()">
+        </div>
+      </div>
+
+      <!-- Bagian: Filter pulau -->
+      <div class="d-flex flex-wrap justify-content-center gap-2 mb-3" id="filter-island"></div>
+      <!-- Bagian: Filter kategori -->
+      <div class="d-flex flex-wrap justify-content-center gap-2 mb-5" id="filter-category"></div>
+
+      <!-- Bagian: Hasil kuliner (diisi otomatis oleh JavaScript) -->
+      <div class="row g-4" id="explore-grid"></div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- HALAMAN TAMBAHAN: DETAIL RESEP (tidak ada di menu)-->
+  <!-- ==================================================== -->
+  <div id="page-recipe" class="page-view">
+    <div class="container py-5" id="recipe-detail-container"></div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- HALAMAN 4: TAMBAH RESEP (form kontribusi pengguna)   -->
+  <!-- ==================================================== -->
+  <div id="page-input-recipe" class="page-view">
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card card-nusantara p-4 p-md-5">
+            <div class="text-center mb-4">
+              <span class="badge bg-success mb-2 px-3 py-2">Kontribusi Komunitas</span>
+              <h2 class="fw-bold">Tambah Resep Kuliner Nusantara</h2>
+              <p class="text-muted">Bagikan resep rahasia keluarga atau daerah Anda.</p>
+            </div>
+            <form onsubmit="handleUserRecipeSubmit(event)">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Nama Makanan</label>
+                <input type="text" id="usr-name" class="form-control" required placeholder="Contoh: Sate Padang Pariaman">
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-semibold">Asal Pulau</label>
+                  <select id="usr-island" class="form-select" required>
+                    <option>Sumatra</option><option>Jawa</option><option>Kalimantan</option>
+                    <option>Sulawesi</option><option>Papua</option><option>Bali</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-semibold">Kategori</label>
+                  <select id="usr-category" class="form-select" required>
+                    <option value="heavy">Makanan Berat</option>
+                    <option value="snacks">Makanan Ringan</option>
+                    <option value="diet">Makanan Diet/Sehat</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">URL Foto Makanan</label>
+                <input type="url" id="usr-image" class="form-control" required placeholder="https://images.unsplash.com/photo-...">
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Deskripsi Singkat</label>
+                <textarea id="usr-desc" class="form-control" rows="2" required></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Bahan-Bahan (satu bahan per baris)</label>
+                <textarea id="usr-ingredients" class="form-control" rows="4" required></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Langkah Pembuatan (satu langkah per baris)</label>
+                <textarea id="usr-steps" class="form-control" rows="5" required></textarea>
+              </div>
+              <button type="submit" class="btn btn-custom-primary w-100 py-3">Simpan & Publikasikan Resep</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- HALAMAN 5: ULASAN & RATING (form + daftar ulasan)    -->
+  <!-- ==================================================== -->
+  <div id="page-rating" class="page-view">
+    <div class="container py-5">
+      <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold mb-3">Ulasan & Rating Kuliner</h1>
+        <p class="text-muted">Bagikan pengalaman kuliner Anda atau lihat ulasan lainnya.</p>
+      </div>
+
+      <!-- Bagian: Form tulis ulasan -->
+      <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+          <div class="card card-nusantara p-4">
+            <h4 class="mb-3 fw-bold">Tulis Ulasan Anda</h4>
+            <form onsubmit="submitReview(event)">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Nama Anda</label>
+                <input type="text" id="review-name" class="form-control" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Pilih Hidangan</label>
+                <select id="review-food" class="form-select" required></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Rating Bintang</label>
+                <select id="review-stars" class="form-select" required>
+                  <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
+                  <option value="4">⭐⭐⭐⭐ (4/5)</option>
+                  <option value="3">⭐⭐⭐ (3/5)</option>
+                  <option value="2">⭐⭐ (2/5)</option>
+                  <option value="1">⭐ (1/5)</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Komentar</label>
+                <textarea id="review-comment" class="form-control" rows="3" required></textarea>
+              </div>
+              <button type="submit" class="btn btn-custom-primary w-100 py-2">Kirim Ulasan</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bagian: Daftar ulasan -->
+      <h3 class="fw-bold mb-4">Ulasan Terbaru</h3>
+      <div class="row g-4" id="reviews-list-grid"></div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- FOOTER (bagian bawah, tampil di semua halaman)       -->
+  <!-- ==================================================== -->
+  <footer class="py-5 mt-5">
+    <div class="container px-4">
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <h4 class="fw-bold mb-3 text-white"><i class="fa-solid fa-utensils me-2"></i>Taste of Nusantara</h4>
+          <p class="text-light opacity-75">Ensiklopedia dan panduan kuliner tradisional Indonesia. Mari lestarikan warisan rasa leluhur bangsa.</p>
+        </div>
+        <div class="col-lg-6">
+          <h5 class="fw-bold mb-3 text-white">Hubungi Kami</h5>
+          <p class="text-light opacity-75 small mb-1"><i class="fa-solid fa-envelope me-2"></i>info@tasteofnusantara.id</p>
+          <p class="text-light opacity-75 small mb-1"><i class="fa-solid fa-phone me-2"></i>+62 812 3456 7890</p>
+        </div>
+      </div>
+      <hr class="border-secondary my-4">
+      <div class="text-center text-light opacity-50 small">&copy; 2026 Taste of Nusantara. All Rights Reserved.</div>
+    </div>
+  </footer>
+
+  <!-- Wadah notifikasi (toast) -->
+  <div id="toast-container"></div>
+
+  <!-- Leaflet JS (untuk peta interaktif) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ========== JAVASCRIPT / LOGIKA WEBSITE ========== -->
+  <script>
+    // ---------- DATA: Database resep bawaan ----------
+    const culinaryData = [
+      {
+        id: 'rendang', name: 'Rendang Minang', island: 'Sumatra', category: 'heavy',
+        image: 'https://images.unsplash.com/photo-1603073163308-9659c0fb12b5?auto=format&fit=crop&w=800&q=80',
+        desc: 'Daging sapi empuk berbumbu rempah dan santan yang dimasak berjam-jam hingga karamelisasi sempurna.',
+        ingredients: ['1 kg Daging sapi (paha)', '1 liter Santan kental', '3 lembar Daun jeruk purut', '2 batang Serai, memarkan', 'Bumbu halus: bawang merah, bawang putih, cabai merah, lengkuas, jahe, kunyit, ketumbar, garam'],
+        steps: ['1. Potong daging sapi sesuai selera.', '2. Rebus santan bersama bumbu halus, serai, dan daun jeruk dengan api sedang.', '3. Masukkan daging, aduk perlahan hingga santan mendidih.', '4. Kecilkan api, aduk terus hingga santan mengering dan berwarna cokelat gelap.', '5. Angkat dan sajikan hangat.'],
+        prepTime: '4 Jam', servings: '6 Porsi'
+      },
+      {
+        id: 'pempek', name: 'Pempek Palembang', island: 'Sumatra', category: 'snacks',
+        image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80',
+        desc: 'Kudapan ikan giling dan sagu, disajikan dengan kuah cuko asam manis pedas.',
+        ingredients: ['500g Ikan tenggiri giling', '300ml Air es', '1 sdm Garam', '400g Tepung sagu', 'Cuko: gula aren, asam jawa, cabai rawit, bawang putih'],
+        steps: ['1. Campur ikan giling dengan air es dan garam.', '2. Masukkan sagu sedikit demi sedikit, aduk ringan.', '3. Bentuk adonan (lenjer atau kapal selam).', '4. Rebus hingga mengapung, tiriskan.', '5. Goreng dan sajikan dengan cuko.'],
+        prepTime: '60 Menit', servings: '5 Porsi'
+      },
+      {
+        id: 'mie-aceh', name: 'Mie Aceh', island: 'Sumatra', category: 'heavy',
+        image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80',
+        desc: 'Mie kuning tebal berkuah kari berempah pekat dengan daging sapi atau seafood.',
+        ingredients: ['400g Mie kuning basah', '200g Daging sapi / udang', 'Kol, tauge, tomat', 'Bumbu kari halus: cabai, bawang, jintan, kapulaga, kunyit, kemiri', 'Kecap manis'],
+        steps: ['1. Tumis bumbu halus hingga harum.', '2. Masukkan daging atau udang, aduk hingga berubah warna.', '3. Masukkan sayuran dan kaldu.', '4. Masukkan mie, kecap, dan garam, aduk rata.', '5. Sajikan dengan emping dan acar.'],
+        prepTime: '30 Menit', servings: '3 Porsi'
+      },
+      {
+        id: 'gudeg', name: 'Gudeg Yogyakarta', island: 'Jawa', category: 'heavy',
+        image: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=800&q=80',
+        desc: 'Nangka muda yang dimasak berjam-jam dengan gula jawa dan santan, manis gurih khas Jawa.',
+        ingredients: ['1 kg Nangka muda', '1 liter Santan', '200g Gula jawa', 'Bumbu halus: bawang merah, bawang putih, kemiri, ketumbar', 'Daun salam, lengkuas'],
+        steps: ['1. Susun daun salam dan lengkuas di dasar panci.', '2. Masukkan nangka, gula jawa, bumbu halus, dan santan.', '3. Masak api kecil tertutup 4-5 jam hingga kemerahan dan empuk.', '4. Sajikan dengan opor ayam dan sambal krecek.'],
+        prepTime: '5 Jam', servings: '6 Porsi'
+      },
+      {
+        id: 'rawon', name: 'Rawon Sapi', island: 'Jawa', category: 'heavy',
+        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80',
+        desc: 'Sup daging sapi berkuah hitam pekat dengan kluwek sebagai bumbu utama.',
+        ingredients: ['500g Daging sapi', '5 buah Kluwek', 'Bumbu halus: bawang merah, bawang putih, ketumbar, jintan, kunyit, jahe', 'Serai, lengkuas, daun jeruk'],
+        steps: ['1. Rebus daging hingga empuk, potong dadu.', '2. Haluskan bumbu bersama kluwek.', '3. Tumis bumbu, masukkan ke kaldu.', '4. Masukkan daging, didihkan bersama serai dan daun jeruk.', '5. Sajikan dengan tauge, sambal terasi, dan telur asin.'],
+        prepTime: '90 Menit', servings: '4 Porsi'
+      },
+      {
+        id: 'klepon', name: 'Klepon Tradisional', island: 'Jawa', category: 'snacks',
+        image: 'https://images.unsplash.com/photo-1599839575945-a9e5af0c3fae?auto=format&fit=crop&w=800&q=80',
+        desc: 'Kue bulat hijau dari tepung ketan berisi gula merah cair, dibalut kelapa parut.',
+        ingredients: ['250g Tepung ketan', '50ml Air pandan', '150ml Air hangat', 'Gula merah sisir', '100g Kelapa parut kukus'],
+        steps: ['1. Campur tepung ketan dengan air pandan dan air hangat hingga bisa dipulung.', '2. Pipihkan adonan, isi gula merah, bulatkan.', '3. Rebus hingga mengapung.', '4. Gulingkan di atas kelapa parut.'],
+        prepTime: '30 Menit', servings: '4 Porsi'
+      },
+      {
+        id: 'soto-banjar', name: 'Soto Banjar', island: 'Kalimantan', category: 'heavy',
+        image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
+        desc: 'Soto ayam berkuah bening harum kayu manis, kapulaga, dan cengkeh khas Kalimantan Selatan.',
+        ingredients: ['1 ekor Ayam kampung', 'Kayu manis, cengkeh, kapulaga, pekak', 'Bumbu halus: bawang merah, bawang putih, merica', 'Pelengkap: perkedel, soun, telur rebus, ketupat'],
+        steps: ['1. Rebus ayam hingga empuk, suwir dagingnya.', '2. Tumis bumbu halus dan rempah, masukkan ke air kaldu.', '3. Tata ketupat, soun, ayam, dan perkedel di mangkuk.', '4. Siram dengan kuah panas.'],
+        prepTime: '60 Menit', servings: '5 Porsi'
+      },
+      {
+        id: 'coto-makassar', name: 'Coto Makassar', island: 'Sulawesi', category: 'heavy',
+        image: 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80',
+        desc: 'Sup daging dan jeroan sapi berkuah kental kaya kacang tanah sangrai dan rempah.',
+        ingredients: ['500g Daging dan jeroan sapi', '200g Kacang tanah sangrai, haluskan', 'Bumbu halus: bawang, ketumbar, jintan, merica, lengkuas, serai', 'Air tajin'],
+        steps: ['1. Rebus daging dan jeroan dalam air tajin hingga empuk.', '2. Tumis bumbu halus, masukkan ke rebusan.', '3. Masukkan kacang halus, masak hingga meresap.', '4. Sajikan dengan ketupat dan sambal tauco.'],
+        prepTime: '90 Menit', servings: '5 Porsi'
+      },
+      {
+        id: 'papeda', name: 'Papeda Papua', island: 'Papua', category: 'diet',
+        image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
+        desc: 'Bubur sagu khas Papua yang kenyal lembut, dinikmati dengan kuah kuning ikan.',
+        ingredients: ['250g Tepung sagu murni', '1 liter Air mendidih', 'Garam', 'Kuah ikan: ikan kakap, belimbing wuluh, kemangi, kunyit, serai, cabai'],
+        steps: ['1. Larutkan sagu dengan sedikit air dingin.', '2. Tuang air mendidih sambil diaduk cepat hingga bening dan kenyal.', '3. Masak ikan dengan bumbu kuah kuning dan belimbing wuluh.', '4. Sajikan papeda hangat dengan kuah ikan.'],
+        prepTime: '30 Menit', servings: '4 Porsi'
+      },
+      {
+        id: 'ayam-betutu', name: 'Ayam Betutu Bali', island: 'Bali', category: 'heavy',
+        image: 'https://images.unsplash.com/photo-1626509809653-5246738f5a51?auto=format&fit=crop&w=800&q=80',
+        desc: 'Ayam utuh berbumbu base genep, dibungkus daun pisang dan dipanggang perlahan.',
+        ingredients: ['1 ekor Ayam kampung', 'Base genep: bawang, cabai, kemiri, ketumbar, kunyit, jahe, lengkuas, kencur, terasi, serai', 'Minyak kelapa'],
+        steps: ['1. Haluskan base genep, tumis sebentar.', '2. Lumuri ayam dan rongga perutnya dengan bumbu.', '3. Bungkus rapat dengan daun pisang.', '4. Kukus atau panggang 2-3 jam hingga empuk.'],
+        prepTime: '3 Jam', servings: '6 Porsi'
+      }
+    ];
+
+    const ISLANDS = ['Semua', 'Sumatra', 'Jawa', 'Kalimantan', 'Sulawesi', 'Papua', 'Bali'];
+    const CATEGORIES = { all: 'Semua Kategori', heavy: 'Makanan Berat', snacks: 'Makanan Ringan', diet: 'Diet / Sehat' };
+    let selectedIsland = 'Semua';
+    let selectedCategory = 'all';
+
+    // ---------- PENYIMPANAN: Resep & ulasan pengguna (localStorage) ----------
+    function getUserRecipes() {
+      return JSON.parse(localStorage.getItem('user_recipes') || '[]');
+    }
+    function getAllCulinaryItems() {
+      return [...culinaryData, ...getUserRecipes()];
+    }
+    function getReviews() {
+      const stored = localStorage.getItem('user_reviews');
+      if (stored) return JSON.parse(stored);
+      return [
+        { name: 'Budi Santoso', food: 'Rendang Minang', stars: 5, comment: 'Rendangnya empuk dan bumbunya meresap sempurna! Sangat autentik.' },
+        { name: 'Siti Aminah', food: 'Coto Makassar', stars: 5, comment: 'Kuahnya kental dan gurih, mirip waktu saya liburan ke Makassar.' }
+      ];
+    }
+
+    // ---------- NAVIGASI: Pindah halaman ----------
+    function switchPage(pageId, extraParam = null) {
+      document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active-page'));
+      const target = document.getElementById('page-' + pageId);
+      if (!target) return;
+      target.classList.add('active-page');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Tandai menu navbar yang aktif
+      document.querySelectorAll('.nav-link[data-nav]').forEach(l =>
+        l.classList.toggle('active-nav', l.dataset.nav === pageId));
+
+      // Isi konten sesuai halaman
+      if (pageId === 'home') renderHomeFlavors();
+      if (pageId === 'map') renderMap();
+      if (pageId === 'explore') { renderFilters(); renderExplore(); }
+      if (pageId === 'rating') { renderReviewFoodOptions(); renderReviewsList(); }
+      if (pageId === 'recipe' && extraParam) renderRecipeDetail(extraParam);
+    }
+
+    // ---------- KOMPONEN: Kartu kuliner (dipakai Home & Jelajah) ----------
+    function cardHTML(item, colClass) {
+      return `
+        <div class="${colClass}">
+          <div class="card card-nusantara h-100 cursor-pointer" onclick="switchPage('recipe', '${item.id}')">
+            <img src="${item.image}" class="card-img-top" alt="${item.name}">
+            <div class="card-body d-flex flex-column">
+              <span class="badge badge-island align-self-start mb-2">${item.island}</span>
+              <h5 class="card-title fw-bold">${item.name}</h5>
+              <p class="card-text text-muted small flex-grow-1">${item.desc}</p>
+              <button class="btn btn-sm btn-custom-primary mt-2">Lihat Resep &rarr;</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ---------- HALAMAN PETA: data 5 pulau besar ----------
+    const islandData = {
+      sumatera: { name: "Sumatera", filter: "Sumatra", coords: [0.5897, 101.3431], zoom: 6,
+        history: "Sumatera dikenal sebagai 'Suwarnadwipa' (Pulau Emas) dalam catatan sejarah kuno dan merupakan pusat perdagangan maritim serta Kerajaan Sriwijaya.",
+        foods: [
+          { name: "Rendang", desc: "Daging sapi khas Minangkabau yang dimasak lama dengan santan dan rempah kaya." },
+          { name: "Pempek", desc: "Makanan khas Palembang berbahan ikan dan sagu, disajikan dengan kuah cuko." },
+          { name: "Mie Aceh", desc: "Mie kuning tebal dengan kuah kari kental berempah gurih." },
+          { name: "Bika Ambon", desc: "Kue tradisional Medan berongga dengan aroma harum daun jeruk." },
+          { name: "Gulai Itiak", desc: "Masakan daging bebek khas Bukittinggi dengan cabai hijau giling." } ] },
+      jawa: { name: "Jawa", filter: "Jawa", coords: [-7.6145, 110.7122], zoom: 7,
+        history: "Jawa adalah pusat peradaban klasik yang melahirkan kerajaan besar seperti Majapahit, Mataram, hingga pusat pemerintahan modern Indonesia.",
+        foods: [
+          { name: "Gudeg", desc: "Nangka muda dimasak berjam-jam dengan gula jawa dan santan khas Yogyakarta." },
+          { name: "Rawon", desc: "Sup daging sapi berkuah hitam legam menggunakan kluwek khas Jawa Timur." },
+          { name: "Soto Betawi", desc: "Soto berkuah santan gurih kaya rempah khas Jakarta." },
+          { name: "Kerak Telor", desc: "Olahan beras ketan, telur, ebi, dan serundeng khas Betawi." },
+          { name: "Lumpia Semarang", desc: "Gorengan isi rebung dan ayam/udang dengan saus kental gurih." } ] },
+      kalimantan: { name: "Kalimantan", filter: "Kalimantan", coords: [-0.5, 114.0], zoom: 6,
+        history: "Pulau Borneo kaya akan sejarah kerajaan Hindu-Islam tertua seperti Kerajaan Kutai serta tradisi masyarakat adat Dayak di hutan tropis.",
+        foods: [
+          { name: "Soto Banjar", desc: "Soto ayam berkuah bening beraroma rempah harum khas Banjar." },
+          { name: "Nasi Kuning Banjar", desc: "Nasi kuning dengan bumbu habang dan lauk telur/ikan." },
+          { name: "Chai Kue", desc: "Kue tradisional isi bengkuang atau kucai khas Singkawang." },
+          { name: "Gangan Manok", desc: "Sup ayam tradisional suku Dayak dengan kuah bening segar." },
+          { name: "Wadi", desc: "Makanan fermentasi tradisional ikan air tawar khas Kalimantan." } ] },
+      sulawesi: { name: "Sulawesi", filter: "Sulawesi", coords: [-1.5, 121.5], zoom: 6,
+        history: "Dikenal dengan pelaut ulung Bugis-Makassar, kerajaan maritim Gowa-Tallo, serta situs megalitikum Toraja.",
+        foods: [
+          { name: "Coto Makassar", desc: "Sup daging sapi berkuah kental kaya kacang tanah sangrai." },
+          { name: "Pisang Epe", desc: "Pisang bakar pipih dengan kuah gula merah cair khas Makassar." },
+          { name: "Konro", desc: "Sup iga sapi berkuah hitam pekat berempah kluwek." },
+          { name: "Nasi Kuning Manado", desc: "Nasi kuning dengan lauk cakalang fufu rica-rica pedas." },
+          { name: "Kue Panada", desc: "Kue empuk berbentuk pastel isi tumisan ikan cakalang pedas." } ] },
+      papua: { name: "Papua", filter: "Papua", coords: [-4.2, 137.0], zoom: 6,
+        history: "Memiliki tradisi luhur masyarakat adat yang harmonis dengan alam pegunungan serta kekayaan alam yang melimpah.",
+        foods: [
+          { name: "Papeda", desc: "Bubur sagu kenyal yang dinikmati bersama kuah kuning ikan." },
+          { name: "Ikan Bakar Manokwari", desc: "Ikan bakar segar disiram sambal mentah ulek khas Papua." },
+          { name: "Kue Lontar", desc: "Kue pai susu manis tradisional warisan masa lampau." },
+          { name: "Udang Selingkuh", desc: "Udang air tawar besar khas sungai Baliem." },
+          { name: "Sagu Bakar", desc: "Olahan tepung sagu padat yang dibakar hingga kering gurih." } ] }
+    };
+
+    // ---------- HALAMAN PETA: inisialisasi peta Leaflet (sekali saja) ----------
+    let leafletMap = null;
+    function renderMap() {
+      if (leafletMap) { setTimeout(() => leafletMap.invalidateSize(), 50); return; }
+
+      leafletMap = L.map('map', { center: [-2.5, 118.0], zoom: 5, minZoom: 4, maxZoom: 9 });
+      // Layer satelit Esri
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18, attribution: 'Tiles &copy; Esri'
+      }).addTo(leafletMap);
+      leafletMap.setMaxBounds([[-11, 94], [6, 142]]);
+
+      // Marker peta + tombol pilih pulau
+      const btnBox = document.getElementById('island-buttons');
+      for (const key in islandData) {
+        const island = islandData[key];
+        const marker = L.marker(island.coords).addTo(leafletMap);
+        marker.bindTooltip(`<b>Pulau ${island.name}</b>`, { direction: 'top', offset: [0, -10] });
+        marker.on('click', () => showIslandInfo(key));
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-outline-success text-start fw-semibold btn-sm rounded-pill py-2 px-3';
+        btn.innerHTML = `<i class="fa-solid fa-location-dot me-1"></i> Pulau ${island.name}`;
+        btn.onclick = () => showIslandInfo(key);
+        btnBox.appendChild(btn);
+      }
+      setTimeout(() => leafletMap.invalidateSize(), 50);
+    }
+
+    // ---------- HALAMAN PETA: tampilkan sejarah & makanan pulau terpilih ----------
+    function showIslandInfo(key) {
+      const data = islandData[key];
+      if (!data) return;
+      leafletMap.flyTo(data.coords, data.zoom, { animate: true, duration: 2.0, easeLinearity: 0.25 });
+
+      document.getElementById('content-display').innerHTML = `
+        <h3 class="fw-bold text-success mb-2">Pulau ${data.name}</h3>
+        <h5 class="fw-semibold text-secondary fs-6">Sejarah singkat</h5>
+        <p class="text-muted small">${data.history}</p>
+        <hr>
+        <h5 class="fw-semibold text-danger mb-3 fs-6">5 Makanan Khas</h5>
+        <div class="row g-2">
+          ${data.foods.map((f, i) => `
+            <div class="col-md-6">
+              <div class="card island-food-card h-100 bg-light border-0 p-3">
+                <h6 class="fw-bold mb-1 text-dark">${i + 1}. ${f.name}</h6>
+                <p class="small text-muted mb-0" style="font-size:.85rem;">${f.desc}</p>
+              </div>
+            </div>`).join('')}
+        </div>
+        <button class="btn btn-custom-primary btn-sm mt-4" onclick="goIsland('${data.filter}')">
+          Lihat resep dari pulau ini &rarr;
+        </button>`;
+    }
+
+    // ---------- Pindah ke halaman Pencarian dengan filter pulau ----------
+    function goIsland(name) {
+      selectedIsland = name; selectedCategory = 'all';
+      document.getElementById('search-input').value = '';
+      switchPage('explore');
+    }
+
+    // ---------- HALAMAN HOME: tampilkan 8 kuliner pilihan ----------
+    function renderHomeFlavors() {
+      const items = getAllCulinaryItems().slice(0, 8);
+      document.getElementById('home-flavors-grid').innerHTML =
+        items.map(i => cardHTML(i, 'col-md-3 col-sm-6')).join('');
+    }
+
+    // ---------- HALAMAN JELAJAH: tombol filter ----------
+    function renderFilters() {
+      document.getElementById('filter-island').innerHTML = ISLANDS.map(i =>
+        `<button class="btn btn-sm btn-custom-secondary ${i === selectedIsland ? 'active' : ''}"
+                 onclick="selectedIsland='${i}'; renderFilters(); renderExplore();">${i === 'Semua' ? 'Semua Pulau' : i}</button>`).join('');
+      document.getElementById('filter-category').innerHTML = Object.entries(CATEGORIES).map(([key, label]) =>
+        `<button class="btn btn-sm btn-custom-secondary ${key === selectedCategory ? 'active' : ''}"
+                 onclick="selectedCategory='${key}'; renderFilters(); renderExplore();">${label}</button>`).join('');
+    }
+
+    // ---------- HALAMAN JELAJAH: hasil pencarian + filter ----------
+    function renderExplore() {
+      const q = document.getElementById('search-input').value.toLowerCase().trim();
+      const items = getAllCulinaryItems().filter(i =>
+        (selectedIsland === 'Semua' || i.island === selectedIsland) &&
+        (selectedCategory === 'all' || i.category === selectedCategory) &&
+        (!q || i.name.toLowerCase().includes(q) || i.island.toLowerCase().includes(q) ||
+               i.desc.toLowerCase().includes(q) ||
+               (Array.isArray(i.ingredients) ? i.ingredients.join(' ') : i.ingredients).toLowerCase().includes(q))
+      );
+      const grid = document.getElementById('explore-grid');
+      grid.innerHTML = items.length
+        ? items.map(i => cardHTML(i, 'col-md-4 col-sm-6')).join('')
+        : `<div class="text-center py-5 text-muted col-12">Tidak ada kuliner yang cocok dengan pencarian Anda.</div>`;
+    }
+
+    // ---------- HALAMAN DETAIL RESEP ----------
+    function renderRecipeDetail(id) {
+      const container = document.getElementById('recipe-detail-container');
+      const item = getAllCulinaryItems().find(i => i.id === id);
+      if (!item) {
+        container.innerHTML = `<div class="text-center py-5"><h3>Resep tidak ditemukan.</h3><button onclick="switchPage('explore')" class="btn btn-custom-primary mt-3">Kembali</button></div>`;
+        return;
+      }
+      const catLabel = CATEGORIES[item.category] || '-';
+      container.innerHTML = `
+        <button onclick="switchPage('explore')" class="btn btn-sm btn-custom-secondary mb-3"><i class="fa-solid fa-arrow-left me-2"></i>Kembali</button>
+        <div class="mb-4">
+          <span class="badge badge-island mb-2 px-3 py-2">${item.island}</span>
+          <h1 class="display-4 fw-bold mb-3">${item.name}</h1>
+          <p class="lead text-muted">${item.desc}</p>
+        </div>
+        <div class="row g-4 mb-5">
+          <div class="col-lg-7">
+            <img src="${item.image}" class="img-fluid rounded-4 w-100 shadow-sm" style="max-height:450px;object-fit:cover;" alt="${item.name}">
+          </div>
+          <div class="col-lg-5">
+            <div class="card card-nusantara p-4 h-100">
+              <h4 class="fw-bold mb-3 text-success"><i class="fa-solid fa-circle-info me-2"></i>Informasi Resep</h4>
+              <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
+                <li><strong>Waktu Memasak:</strong> ${item.prepTime || '45 Menit'}</li>
+                <li><strong>Porsi:</strong> ${item.servings || '4 Porsi'}</li>
+                <li><strong>Asal Daerah:</strong> Pulau ${item.island}</li>
+                <li><strong>Kategori:</strong> ${catLabel}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="card card-nusantara p-4 h-100">
+              <h3 class="fw-bold mb-3 text-success"><i class="fa-solid fa-basket-shopping me-2"></i>Bahan-Bahan</h3>
+              <ul class="list-group list-group-flush">
+                ${item.ingredients.map(x => `<li class="list-group-item bg-transparent border-0 px-0 py-2"><i class="fa-solid fa-check text-success me-2"></i>${x}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card card-nusantara p-4 h-100">
+              <h3 class="fw-bold mb-3 text-success"><i class="fa-solid fa-list-ol me-2"></i>Langkah Pembuatan</h3>
+              <ul class="list-group list-group-flush">
+                ${item.steps.map(x => `<li class="list-group-item bg-transparent border-0 px-0 py-2">${x}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ---------- HALAMAN TAMBAH RESEP: simpan resep baru ----------
+    function handleUserRecipeSubmit(e) {
+      e.preventDefault();
+      const newRecipe = {
+        id: 'usr_' + Date.now(),
+        name: document.getElementById('usr-name').value,
+        island: document.getElementById('usr-island').value,
+        category: document.getElementById('usr-category').value,
+        image: document.getElementById('usr-image').value,
+        desc: document.getElementById('usr-desc').value,
+        ingredients: document.getElementById('usr-ingredients').value.split('\n').filter(Boolean),
+        steps: document.getElementById('usr-steps').value.split('\n').filter(Boolean),
+        prepTime: '45 Menit', servings: '4 Porsi'
+      };
+      const list = getUserRecipes();
+      list.push(newRecipe);
+      localStorage.setItem('user_recipes', JSON.stringify(list));
+      showToast('Resep berhasil ditambahkan dan disimpan!');
+      e.target.reset();
+      selectedIsland = 'Semua'; selectedCategory = 'all';
+      switchPage('explore');
+    }
+
+    // ---------- HALAMAN ULASAN: pilihan hidangan, kirim, tampilkan ----------
+    function renderReviewFoodOptions() {
+      document.getElementById('review-food').innerHTML =
+        '<option value="">-- Pilih Kuliner --</option>' +
+        getAllCulinaryItems().map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+    }
+    function submitReview(e) {
+      e.preventDefault();
+      const reviews = getReviews();
+      reviews.unshift({
+        name: document.getElementById('review-name').value,
+        food: document.getElementById('review-food').value,
+        stars: document.getElementById('review-stars').value,
+        comment: document.getElementById('review-comment').value
+      });
+      localStorage.setItem('user_reviews', JSON.stringify(reviews));
+      showToast('Ulasan Anda berhasil dikirim!');
+      e.target.reset();
+      renderReviewsList();
+    }
+    function renderReviewsList() {
+      document.getElementById('reviews-list-grid').innerHTML = getReviews().map(r => `
+        <div class="col-md-6">
+          <div class="card card-nusantara p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="fw-bold mb-0">${r.name}</h5>
+              <span class="text-warning">${'⭐'.repeat(r.stars)}</span>
+            </div>
+            <p class="small text-success fw-semibold mb-2">Hidangan: ${r.food}</p>
+            <p class="text-muted mb-0">"${r.comment}"</p>
+          </div>
+        </div>`).join('');
+    }
+
+    // ---------- NOTIFIKASI: Toast ----------
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const id = 'toast_' + Date.now();
+      container.innerHTML = `
+        <div id="${id}" class="toast align-items-center text-white bg-success border-0 show shadow" role="alert">
+          <div class="d-flex"><div class="toast-body fw-semibold"><i class="fa-solid fa-circle-check me-2"></i>${message}</div></div>
+        </div>`;
+      setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 4000);
+    }
+
+    // ---------- INISIALISASI: dijalankan saat website dibuka ----------
+    window.onload = function () { switchPage('home'); };
+  </script>
+</body>
+</html>
